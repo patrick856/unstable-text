@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>unstable-text — Zero-Reflow Ambient Scramble Showcase</title>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: #111827;
+      --card-border: #1f2937;
+      --text: #e5e7eb;
+      --text-muted: #9ca3af;
+      --accent: #3b82f6;
+      --accent-glow: rgba(59, 130, 246, 0.3);
+      --green: #10b981;
+      --neon-green: #00ff66;
+      --purple: #8b5cf6;
+      --amber: #f59e0b;
+      --rose: #f43f5e;
+      --cyan: #06b6d4;
+      --code-bg: #030712;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      line-height: 1.6;
+    }
+
+    /* Fixed Navigation Bar */
+    nav {
+      width: 100%;
+      background: rgba(17, 24, 39, 0.95);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--card-border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      padding: 0.85rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .nav-brand {
+      font-weight: 800;
+      font-size: 1.25rem;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      letter-spacing: -0.02em;
+    }
+
+    .nav-brand span {
+      background: linear-gradient(135deg, var(--green), var(--cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .nav-tabs {
+      display: flex;
+      gap: 0.5rem;
+      background: #0b0f19;
+      padding: 0.25rem;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+    }
+
+    .tab-btn {
+      background: transparent;
+      color: var(--text-muted);
+      border: none;
+      padding: 0.45rem 1rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .tab-btn:hover {
+      color: #fff;
+    }
+
+    .tab-btn.active {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+
+    .nav-status {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.825rem;
+      color: var(--text-muted);
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #4b5563;
+      transition: background 0.3s;
+    }
+
+    .dot.active {
+      background: var(--green);
+      box-shadow: 0 0 10px var(--neon-green);
+    }
+
+    .btn-toggle-engine {
+      background: var(--rose);
+      color: #fff;
+      border: none;
+      padding: 0.4rem 0.9rem;
+      font-size: 0.825rem;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .btn-toggle-engine:hover {
+      opacity: 0.9;
+    }
+
+    .btn-toggle-engine.paused {
+      background: var(--green);
+    }
+
+    /* Main Container & Page Sections */
+    .container {
+      max-width: 940px;
+      width: 100%;
+      padding: 2.5rem 1.5rem 6rem;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Hero Banner */
+    .hero {
+      text-align: center;
+      padding: 2rem 1rem 3rem;
+    }
+
+    .hero-badge {
+      display: inline-block;
+      background: rgba(16, 185, 129, 0.12);
+      color: var(--neon-green);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 0.3rem 0.8rem;
+      font-size: 0.8rem;
+      font-weight: 700;
+      border-radius: 50px;
+      margin-bottom: 1rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .hero h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: #fff;
+      line-height: 1.25;
+      margin-bottom: 1rem;
+      letter-spacing: -0.03em;
+    }
+
+    .hero p {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    /* Cards & Grids */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 1.75rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+    }
+
+    .card-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 2rem;
+    }
+
+    .feature-card {
+      background: #0b0f19;
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 1.25rem;
+    }
+
+    .feature-card h3 {
+      font-size: 1rem;
+      color: #fff;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .feature-card p {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+
+    /* Override Box */
+    .override-box {
+      background: rgba(11, 15, 25, 0.8);
+      border-left: 4px solid var(--neon-green);
+      border: 1px solid var(--card-border);
+      border-left-width: 4px;
+      padding: 1.25rem;
+      border-radius: 8px;
+      margin-top: 1.5rem;
+    }
+
+    /* Interactive Sandbox */
+    .playground-textarea {
+      width: 100%;
+      background: #0b0f19;
+      color: #fff;
+      border: 1px solid #374151;
+      padding: 0.85rem 1rem;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 1rem;
+      resize: vertical;
+      min-height: 80px;
+      outline: none;
+      margin-bottom: 1rem;
+    }
+
+    .playground-textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+
+    .playground-output-box {
+      background: #0b0f19;
+      border: 1px dashed #374151;
+      padding: 1.5rem;
+      border-radius: 8px;
+      font-size: 1.2rem;
+      line-height: 1.7;
+      min-height: 90px;
+      margin-bottom: 1.5rem;
+      color: #fff;
+      word-wrap: break-word;
+    }
+
+    .btn-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 0.6rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .btn {
+      background: #1f2937;
+      color: #fff;
+      border: 1px solid var(--card-border);
+      padding: 0.65rem 0.85rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+      text-align: center;
+    }
+
+    .btn:hover {
+      background: #374151;
+      transform: translateY(-1px);
+    }
+
+    .btn-accent { background: var(--accent); }
+    .btn-accent:hover { background: #2563eb; }
+
+    .btn-bulb { background: var(--amber); color: #000; font-weight: 700; }
+    .btn-bulb:hover { background: #d97706; }
+
+    .btn-purple { background: var(--purple); }
+    .btn-purple:hover { background: #7c3aed; }
+
+    .btn-neon-green { background: #00993d; color: var(--neon-green); font-weight: 700; border-color: var(--neon-green); }
+    .btn-neon-green:hover { background: #00b347; color: #fff; }
+
+    .btn-neon-red { background: #990033; color: #ff6699; font-weight: 700; border-color: #ff0055; }
+    .btn-neon-red:hover { background: #cc0044; color: #fff; }
+
+    .btn-neon-blue { background: #0088cc; color: #66e0ff; font-weight: 700; border-color: #00f3ff; }
+    .btn-neon-blue:hover { background: #00aaff; color: #fff; }
+
+    .btn-primary { background: var(--green); color: #000; font-weight: 700; }
+    .btn-primary:hover { background: #059669; color: #fff; }
+
+    .event-log {
+      background: #030712;
+      border: 1px solid var(--card-border);
+      padding: 0.75rem 1rem;
+      border-radius: 6px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.8rem;
+      color: var(--cyan);
+    }
+
+    /* Code Snippet Box */
+    .code-block {
+      background: var(--code-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.875rem;
+      color: var(--text);
+      overflow-x: auto;
+      margin-top: 0.5rem;
+      white-space: pre;
+    }
+
+    .code-keyword { color: #f472b6; }
+    .code-string { color: #34d399; }
+    .code-comment { color: #6b7280; font-style: italic; }
+    .code-function { color: #60a5fa; }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation Bar -->
+  <nav>
+    <div class="nav-brand">
+      ⚡ <span>unstable-text</span>
+    </div>
+
+    <div class="nav-tabs">
+      <button class="tab-btn active" data-tab="tab-showcase">Ambient Showcase</button>
+      <button class="tab-btn" data-tab="tab-sandbox">Interactive Sandbox</button>
+      <button class="tab-btn" data-tab="tab-guide">Integration & React Guide</button>
+    </div>
+
+    <div class="nav-status">
+      <div class="status-indicator">
+        <div class="dot active" id="status-dot"></div>
+        <span id="status-text">Background Engine: Active</span>
+      </div>
+      <button id="btn-toggle-engine" class="btn-toggle-engine">Pause Engine</button>
+    </div>
+  </nav>
+
+  <div class="container">
+
+    <!-- TAB 1: AMBIENT SHOWCASE -->
+    <div id="tab-showcase" class="tab-content active">
+      <div class="hero">
+        <div class="hero-badge">v1.0.0 Zero Layout Reflow Library</div>
+        <h1>Ambient Text Scramble for High-End Web UI</h1>
+        <p>
+          Automatically detects visible page text, triggers subtle decrypt/glitch animations at randomized intervals, and guarantees zero layout shift across all fonts.
+        </p>
+      </div>
+
+      <!-- Feature Highlights Grid -->
+      <div class="grid-2">
+        <div class="feature-card">
+          <h3>⚡ 0px Baseline Float & Reflow</h3>
+          <p>Transient inline-block spans with <code>overflow: visible; vertical-align: baseline</code> ensure surrounding text remains 100% stationary during glitches.</p>
+        </div>
+        <div class="feature-card">
+          <h3>💚 Neon Color & Intensity Control</h3>
+          <p>Supports preset neon reflections or any arbitrary CSS color string (hex, rgb, hsl) with customizable <code>subtle</code>, <code>normal</code>, or <code>intense</code> glow spread.</p>
+        </div>
+        <div class="feature-card">
+          <h3>⏳ Per-Node Cooldown Tracking</h3>
+          <p>WeakMap timestamp tracking distributes ambient glitches evenly across paragraphs so a single word never gets targeted repeatedly.</p>
+        </div>
+        <div class="feature-card">
+          <h3>🛡️ SPA & SSR Protection</h3>
+          <p>Clean server-side rendering safety for Next.js/Nuxt and <code>destroy()</code> teardown method to prevent memory leaks in React component unmounts.</p>
+        </div>
+      </div>
+
+      <!-- Live Paragraph Showcase -->
+      <div class="card">
+        <div class="card-title">
+          <span>📖</span> Proportional Font Ambient Scramble Demonstration
+        </div>
+        <p style="margin-bottom: 1rem; color: var(--text);">
+          This paragraph is rendered in a proportional font (System UI / Sans-Serif) where letters have variable pixel widths. Watch as ambient glitches trigger automatically across the text below without causing any layout jitter, word wrapping, or baseline shift:
+        </p>
+        <p style="font-size: 1.05rem; color: var(--text-muted); line-height: 1.8;">
+          Modern web interfaces require seamless motion that enhances usability without disrupting visual structure. The unstable-text library scans eligible DOM text nodes, computes exact bounding rectangles, and applies transient wrapper spans for glitch animations while protecting interactive controls like buttons, links, inputs, and code blocks.
+        </p>
+
+        <!-- HTML Data Attribute Override Showcase -->
+        <div class="override-box" data-glitch-effects="neonColorChar,corruptChar" data-glitch-color="#00ff66" data-glitch-intensity="intense" data-glitch-speed="slow">
+          <strong style="color: #fff; font-weight: 700;">HTML Data-Attribute Override Demo:</strong>
+          <p style="margin-top: 0.5rem; margin-bottom: 0; color: var(--text-muted);">
+            This box contains <code>data-glitch-effects="neonColorChar,corruptChar"</code>, <code>data-glitch-color="#00ff66"</code>, and <code>data-glitch-intensity="intense"</code>. The background engine automatically respects per-element HTML overrides!
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: INTERACTIVE SANDBOX -->
+    <div id="tab-sandbox" class="tab-content">
+      <div class="card">
+        <div class="card-title">
+          <span>⚡</span> Custom Text Sandbox & Real-Time Controls
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+          <label for="custom-text-input" style="display: block; font-size: 0.875rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+            Type any custom text below to test individual glitch modes with zero layout shift:
+          </label>
+          <textarea id="custom-text-input" class="playground-textarea">The quick brown fox jumps over the lazy dog near the quantum node.</textarea>
+        </div>
+
+        <div class="playground-output-box" id="playground-target-container">
+          <span id="playground-text-node">The quick brown fox jumps over the lazy dog near the quantum node.</span>
+        </div>
+
+        <!-- 12 Trigger Buttons -->
+        <div class="btn-grid">
+          <button class="btn btn-accent" id="btn-play-micro-chars">Micro-Chars (300ms)</button>
+          <button class="btn btn-accent" id="btn-play-micro-words">Micro-Words (400ms)</button>
+          <button class="btn btn-accent" id="btn-play-swap">Word Swap (500-700ms)</button>
+          <button class="btn btn-accent" id="btn-play-corrupt">Broken Char (3-6s)</button>
+          <button class="btn btn-bulb" id="btn-play-bulb">💡 Lamp Blip (2-4s)</button>
+          <button class="btn btn-purple" id="btn-play-jitter">🎯 Jitter Pulse (1-2s)</button>
+          <button class="btn btn-purple" id="btn-play-shift-hold">📍 Shift Hold (1-2s)</button>
+          <button class="btn btn-neon-green" id="btn-play-neon-green">💚 Neon Green (1-3s)</button>
+          <button class="btn btn-neon-red" id="btn-play-neon-red">❤️ Neon Red (1-3s)</button>
+          <button class="btn btn-neon-blue" id="btn-play-neon-blue">💙 Neon Blue (1-3s)</button>
+          <button class="btn btn-neon-green" id="btn-play-glowing-scramble">✨ Glowing Scramble</button>
+          <button class="btn btn-primary" id="btn-play-full">Full Phrase Decrypt</button>
+        </div>
+
+        <!-- Real-Time Settings Panel -->
+        <div style="display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; margin-bottom: 1.25rem; padding: 1rem; background: #0b0f19; border-radius: 8px; border: 1px solid var(--card-border);">
+          <div style="flex: 1; min-width: 240px;">
+            <label for="input-neon-chance-slider" style="display: flex; justify-content: space-between; align-items: center; font-size: 0.875rem; color: var(--text); font-weight: 600; margin-bottom: 0.35rem;">
+              <span>💚 Neon Accent Chance:</span>
+              <span id="neon-chance-val" style="color: var(--neon-green); font-weight: 700;">35%</span>
+            </label>
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <input type="range" id="input-neon-chance-slider" min="0" max="100" value="35" step="1" style="flex: 1; accent-color: var(--neon-green); cursor: pointer;">
+              <input type="number" id="input-neon-chance-num" min="0" max="100" value="35" style="width: 65px; background: #111827; border: 1px solid var(--card-border); color: #fff; border-radius: 4px; padding: 0.25rem 0.5rem; font-size: 0.875rem; text-align: center;"> %
+            </div>
+          </div>
+
+          <div style="width: 180px;">
+            <label for="select-glow-intensity" style="display: block; font-size: 0.875rem; color: var(--text); font-weight: 600; margin-bottom: 0.35rem;">
+              ✨ Glow Intensity:
+            </label>
+            <select id="select-glow-intensity" style="width: 100%; background: #111827; border: 1px solid var(--card-border); color: #fff; border-radius: 6px; padding: 0.4rem 0.6rem; font-size: 0.875rem;">
+              <option value="subtle">Subtle (2px/6px/10px)</option>
+              <option value="normal" selected>Normal (5px/12px/22px)</option>
+              <option value="intense">Intense (8px/18px/35px)</option>
+            </select>
+          </div>
+
+          <div style="width: 170px;">
+            <label for="select-ambient-intensity" style="display: block; font-size: 0.875rem; color: var(--text); font-weight: 600; margin-bottom: 0.35rem;">
+              🎯 Overall Intensity:
+            </label>
+            <select id="select-ambient-intensity" style="width: 100%; background: #111827; border: 1px solid var(--card-border); color: #fff; border-radius: 6px; padding: 0.4rem 0.6rem; font-size: 0.875rem;">
+              <option value="SUBTLE">Subtle (1 active, 1.5-4s)</option>
+              <option value="LOW">Low (1-2 active, 1-3s)</option>
+              <option value="NORMAL" selected>Normal (2-4 active, 0.6-2s)</option>
+              <option value="HIGH">High (3-6 active, 0.3-1.2s)</option>
+              <option value="CHAOTIC">Chaotic (5-10 active, 0.15-0.6s)</option>
+            </select>
+          </div>
+
+          <div style="width: 160px;">
+            <label for="select-speed-preset" style="display: block; font-size: 0.875rem; color: var(--text); font-weight: 600; margin-bottom: 0.35rem;">
+              ⚡ Speed Preset:
+            </label>
+            <select id="select-speed-preset" style="width: 100%; background: #111827; border: 1px solid var(--card-border); color: #fff; border-radius: 6px; padding: 0.4rem 0.6rem; font-size: 0.875rem;">
+              <option value="VERY_FAST">Very Fast (0.3x)</option>
+              <option value="FAST">Fast (0.6x)</option>
+              <option value="NORMAL" selected>Normal (1.0x)</option>
+              <option value="SLOW">Slow (1.7x)</option>
+              <option value="VERY_SLOW">Very Slow (2.5x)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="event-log" id="event-log-output">Status: Ready for triggers.</div>
+      </div>
+    </div>
+
+    <!-- TAB 3: INTEGRATION & REACT GUIDE -->
+    <div id="tab-guide" class="tab-content">
+      <div class="card">
+        <div class="card-title">
+          <span>📦</span> Installation & Usage Guide
+        </div>
+
+        <h4 style="color: #fff; margin-bottom: 0.5rem;">Install via npm:</h4>
+        <div class="code-block"><span class="code-keyword">npm</span> install unstable-text</div>
+
+        <h4 style="color: #fff; margin-top: 1.5rem; margin-bottom: 0.5rem;">1. Vanilla JS Zero-Config Ambient Scheduler:</h4>
+        <div class="code-block"><span class="code-keyword">import</span> { UnstableTextScheduler } <span class="code-keyword">from</span> <span class="code-string">'unstable-text'</span>;
+
+<span class="code-comment">// Automatically scans and targets visible text in document.body</span>
+<span class="code-keyword">const</span> scheduler = <span class="code-keyword">new</span> <span class="code-function">UnstableTextScheduler</span>();
+scheduler.<span class="code-function">start</span>();</div>
+
+        <h4 style="color: #fff; margin-top: 1.5rem; margin-bottom: 0.5rem;">2. React Hook Integration (`useUnstableText`):</h4>
+        <div class="code-block"><span class="code-keyword">import</span> React <span class="code-keyword">from</span> <span class="code-string">'react'</span>;
+<span class="code-keyword">import</span> { useUnstableText } <span class="code-keyword">from</span> <span class="code-string">'unstable-text/react'</span>;
+
+<span class="code-keyword">export const</span> <span class="code-function">HeroSection</span> = () => {
+  <span class="code-comment">// Automatically handles start() on mount and destroy() on unmount</span>
+  <span class="code-keyword">const</span> { ref, trigger } = <span class="code-function">useUnstableText</span>({
+    minInterval: <span class="code-string">800</span>,
+    maxInterval: <span class="code-string">2500</span>,
+    neonColor: <span class="code-string">'#00ff66'</span>,
+    glowIntensity: <span class="code-string">'intense'</span>
+  });
+
+  <span class="code-keyword">return</span> (
+    &lt;<span class="code-keyword">div</span> ref={ref}&gt;
+      &lt;<span class="code-keyword">h1</span>&gt;Unstable Text System&lt;/<span class="code-keyword">h1</span>&gt;
+      &lt;<span class="code-keyword">button</span> onClick={() => <span class="code-function">trigger</span>(<span class="code-string">'fullScramble'</span>)}&gt;Decrypt Header&lt;/<span class="code-keyword">button</span>&gt;
+    &lt;/<span class="code-keyword">div</span>&gt;
+  );
+};</div>
+
+        <h4 style="color: #fff; margin-top: 1.5rem; margin-bottom: 0.5rem;">3. Manual Trigger API:</h4>
+        <div class="code-block"><span class="code-keyword">import</span> UnstableText <span class="code-keyword">from</span> <span class="code-string">'unstable-text'</span>;
+
+<span class="code-keyword">const</span> header = document.<span class="code-function">querySelector</span>(<span class="code-string">'h1'</span>);
+UnstableText.<span class="code-function">trigger</span>(header, <span class="code-string">'corruptChar'</span>, { duration: <span class="code-string">3000</span> });</div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="unstable-text.js"></script>
+  <script>
+    // Tab Switching Logic
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    tabBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        tabBtns.forEach((b) => b.classList.remove('active'));
+        tabContents.forEach((c) => c.classList.remove('active'));
+
+        btn.classList.add('active');
+        const targetTabId = btn.getAttribute('data-tab');
+        document.getElementById(targetTabId).classList.add('active');
+      });
+    });
+
+    // Initialize Scheduler
+    const logOutput = document.getElementById('event-log-output');
+
+    const scheduler = new UnstableText.Scheduler({
+      minInterval: 800,
+      maxInterval: 2500,
+      maxConcurrent: 3,
+      speedMultiplier: UnstableText.SPEED_PRESETS.NORMAL,
+      onGlitchStart: (node, effect) => {
+        if (logOutput) logOutput.textContent = `[Event Log] Glitch Started: ${effect}`;
+      },
+      onGlitchEnd: (node, effect) => {
+        if (logOutput) logOutput.textContent = `[Event Log] Glitch Finished: ${effect}`;
+      }
+    });
+
+    // Engine Toggle Button
+    const toggleBtn = document.getElementById('btn-toggle-engine');
+    const statusDot = document.getElementById('status-dot');
+    const statusText = document.getElementById('status-text');
+
+    toggleBtn.addEventListener('click', () => {
+      if (scheduler.isRunning) {
+        scheduler.stop();
+        statusDot.classList.remove('active');
+        statusText.textContent = 'Background Engine: Paused';
+        toggleBtn.textContent = 'Resume Engine';
+        toggleBtn.classList.add('paused');
+      } else {
+        scheduler.start();
+        statusDot.classList.add('active');
+        statusText.textContent = 'Background Engine: Active';
+        toggleBtn.textContent = 'Pause Engine';
+        toggleBtn.classList.remove('paused');
+      }
+    });
+
+    // Controls Panel Event Listeners
+    const sliderNeonChance = document.getElementById('input-neon-chance-slider');
+    const numNeonChance = document.getElementById('input-neon-chance-num');
+    const valNeonChance = document.getElementById('neon-chance-val');
+    const selectGlowIntensity = document.getElementById('select-glow-intensity');
+    const selectAmbientIntensity = document.getElementById('select-ambient-intensity');
+    const selectSpeedPreset = document.getElementById('select-speed-preset');
+
+    function updateNeonChance(val) {
+      let num = Math.min(100, Math.max(0, parseFloat(val) || 0));
+      sliderNeonChance.value = num;
+      numNeonChance.value = num;
+      valNeonChance.textContent = `${num}%`;
+      scheduler.neonGlitchChance = num / 100;
+    }
+
+    sliderNeonChance.addEventListener('input', (e) => updateNeonChance(e.target.value));
+    numNeonChance.addEventListener('input', (e) => updateNeonChance(e.target.value));
+    updateNeonChance(35);
+
+    selectGlowIntensity.addEventListener('change', (e) => {
+      scheduler.glowIntensity = e.target.value;
+    });
+
+    selectAmbientIntensity.addEventListener('change', (e) => {
+      scheduler.setAmbientIntensity(e.target.value);
+    });
+
+    selectSpeedPreset.addEventListener('change', (e) => {
+      const presetVal = UnstableText.SPEED_PRESETS[e.target.value] || 1.0;
+      scheduler.speedMultiplier = presetVal;
+    });
+
+    // Playground Interactive Elements
+    const playgroundInput = document.getElementById('custom-text-input');
+    const playgroundTextNodeEl = document.getElementById('playground-text-node');
+
+    playgroundInput.addEventListener('input', () => {
+      playgroundTextNodeEl.textContent = playgroundInput.value || 'Type something to test...';
+    });
+
+    function getPlaygroundTarget() {
+      try { playgroundTextNodeEl.normalize(); } catch (e) {}
+      return playgroundTextNodeEl;
+    }
+
+    function getPlaygroundOpts(extra = {}) {
+      const applyNeon = Math.random() < scheduler.neonGlitchChance;
+      return {
+        neonColor: applyNeon ? (extra.neonColor || 'GREEN') : undefined,
+        glowIntensity: scheduler.glowIntensity,
+        speedMultiplier: scheduler.speedMultiplier,
+        onGlitchStart: (node, eff) => {
+          if (logOutput) logOutput.textContent = `[Manual Trigger] Started: ${eff}${applyNeon ? ' ✨ (Neon Accent Applied)' : ''}`;
+        },
+        onGlitchEnd: (node, eff) => {
+          if (logOutput) logOutput.textContent = `[Manual Trigger] Finished: ${eff}`;
+        },
+        ...extra
+      };
+    }
+
+    document.getElementById('btn-play-micro-chars').addEventListener('click', () => {
+      UnstableText.trigger(getPlaygroundTarget(), 'microChars', getPlaygroundOpts());
+    });
+
+    document.getElementById('btn-play-micro-words').addEventListener('click', () => {
+      UnstableText.trigger(getPlaygroundTarget(), 'microWords', getPlaygroundOpts());
+    });
+
+    document.getElementById('btn-play-swap').addEventListener('click', () => {
+      UnstableText.trigger(getPlaygroundTarget(), 'swapWords', getPlaygroundOpts());
+    });
+
+    document.getElementById('btn-play-corrupt').addEventListener('click', () => {
+      UnstableText.trigger(getPlaygroundTarget(), 'corruptChar', getPlaygroundOpts({ duration: 4000 }));
+    });
+
+    document.getElementById('btn-play-bulb').addEventListener('click', () => {
+      UnstableText.trigger(getPlaygroundTarget(), 'blipChar', getPlaygroundOpts({ duration: 3000 }));
+    });
+
+    document.getElementById('btn-play-jitter').addEventListener('click', () => {
+      UnstableText.trigger(getPlaygroundTarget(), 'jitterChar', getPlaygroundOpts({ duration: 1500 }));
+    });
+
+    document.getElementById('btn-play-shift-hold').addEventListener('click', () => {
+      UnstableText.trigger(getPlaygroundTarget(), 'shiftHoldChar', getPlaygroundOpts({ duration: 1500 }));
+    });
+
+    document.getElementById('btn-play-neon-green').addEventListener('click', () => {
+      UnstableText.trigger(getPlaygroundTarget(), 'neonColorChar', getPlaygroundOpts({ neonColor: 'GREEN', duration: 2500 }));
+    });
+
+    document.getElementById('btn-play-neon-red').addEventListener('click', () => {
+      UnstableText.trigger(getPlaygroundTarget(), 'neonColorChar', getPlaygroundOpts({ neonColor: 'RED', duration: 2500 }));
+    });
+
+    document.getElementById('btn-play-neon-blue').addEventListener('click', () => {
+      UnstableText.trigger(getPlaygroundTarget(), 'neonColorChar', getPlaygroundOpts({ neonColor: 'BLUE', duration: 2500 }));
+    });
+
+    document.getElementById('btn-play-glowing-scramble').addEventListener('click', () => {
+      UnstableText.trigger(getPlaygroundTarget(), 'microChars', getPlaygroundOpts({ neonColor: 'BLUE', duration: 600 }));
+    });
+
+    document.getElementById('btn-play-full').addEventListener('click', () => {
+      UnstableText.trigger(getPlaygroundTarget(), 'fullScramble', getPlaygroundOpts());
+    });
+
+    // Start background ambient scheduler
+    scheduler.start();
+  </script>
+</body>
+</html>
